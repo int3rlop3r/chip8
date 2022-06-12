@@ -1,19 +1,19 @@
 package main
 
-import "fmt"
-
-type Chip struct {
-	//0x000 to 0x1FF
-	mem      [4096]byte
-	v        [16]byte
-	i        uint16
-	delay    uint8
-	sound    uint8
-	keyboard [16]byte
-}
+import (
+	"flag"
+	"fmt"
+)
 
 func main() {
+	romPath := flag.String("rom", "", "path to a valid CHIP-8 ROM")
+	flag.Parse()
+
 	var chip Chip
-	_ = chip.v
-	fmt.Println("chip-8 emulator!")
+	err := chip.LoadROM(*romPath)
+	if err != nil {
+		fmt.Println("err:", err)
+		return
+	}
+	fmt.Println("chip-8 emulator!", len(chip.mem))
 }
