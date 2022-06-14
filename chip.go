@@ -105,6 +105,24 @@ func (c *Chip) Run() error {
 				c.pc += 2
 			}
 			c.pc += 2
+		case 0x6000: // LD Vx, byte
+			x := opcode & 0x0F00
+			kk := byte(opcode & 0x00FF)
+			c.v[x] = kk
+			c.pc += 2
+		case 0x7000: // Add Vx, byte
+			x := opcode & 0x0F00
+			kk := byte(opcode & 0x00FF)
+			c.v[x] += kk
+			c.pc += 2
+		case 0x8000: // LD Vx, Vy
+			// @WIP
+			x := opcode & 0x0F00
+			y := opcode & 0x00F0
+			if c.v[x] == c.v[y] { // @TODO: check if x == 'F' ?
+				c.pc += 2
+			}
+			c.pc += 2
 		case 0xA000:
 			c.i = opcode & 0x0FFF
 		default:
