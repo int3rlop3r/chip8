@@ -18,7 +18,6 @@ type Chip struct {
 	i        uint16
 	pc       uint16
 	sp       uint16
-	stack    [16]uint16
 	delay    uint8
 	sound    uint8
 	keyboard [16]byte
@@ -30,6 +29,7 @@ type Chip struct {
 func NewChip() *Chip {
 	var chip Chip
 	chip.pc = startOff
+	chip.sp = 0xEA0
 	return &chip
 }
 
@@ -105,7 +105,7 @@ func (c *Chip) Run() error {
 		case 0x1000: // jmp addr
 			c.pc = opcode & 0x0FFF
 		case 0x2000: // call addr
-			c.stack[c.sp] = c.pc
+			c.mem[c.sp] = c.pc
 			c.sp++
 			c.SetJump(opcode & 0x0FFF)
 		case 0x3000: // SE Vx, byte
