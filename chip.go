@@ -22,8 +22,8 @@ type Chip struct {
 	delay    uint8
 	sound    uint8
 	keyboard [16]byte
-	display  [32][63]byte
-	stack    [24]uint16 // for now let's not use the emulated memory
+	display  [64 * 32]byte // since display is 64*32
+	stack    [24]uint16    // for now let's not use the emulated memory
 
 	jmp bool // this flag is not part of the spec, used for iteration
 }
@@ -217,11 +217,37 @@ func (c *Chip) Run() error {
 			x := (opcode & 0x0F00) >> 8
 			c.v[x] = uint8(rand.Intn(256)) & uint8((opcode&0x00FF)>>8)
 		case 0xD000: // DRW Vx, Vy, nibble
-			//fmt.Println("Draw not implemented")
-			x := (opcode & 0x0F00) >> 8
-			y := (opcode & 0x00F0) >> 4
+			x := uint16(c.v[(opcode&0x0F00)>>8])
+			y := uint16(c.v[(opcode&0x00F0)>>4])
 			n := opcode & 0x000F
-			for i := 0; i < n; i++ {
+			//mems := make([]byte, 0, n)
+			for yLine := uint16(0); yLine < n; yLine++ {
+				row := c.mem[c.i+yLine]
+				//mems = append(mems, row)
+				for xLine := uint16(0); xLine < 8; xLine++ {
+					pix := row & (0x80 >> xLine)
+					if pix == 0 {
+						continue
+					}
+					pos := x + xLine + (y + yLine*64)
+					//fmt.Printf("pos: %d, pix: %02x\n", pos, pix)
+					if c.display[pos] == 1 {
+						c.v[0xF] = 1
+					}
+					c.display[pos] ^= 1
+				}
+			}
+			//fmt.Printf("x: %d, y: %d, mems: %02x\n", x, y, mems)
+			//fmt.Println("f:", c.v[0xf])
+			for i := range c.display {
+				if i%64 == 0 {
+					fmt.Println()
+				}
+				if c.display[i] == 0 {
+					fmt.Print(" ")
+					continue
+				}
+				fmt.Print(c.display[i])
 			}
 		case 0xE000:
 			fmt.Println("Keypad not implemented")
