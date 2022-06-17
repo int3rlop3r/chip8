@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"time"
 )
 
 const (
@@ -107,6 +108,7 @@ func (c *Chip) loadFonts() {
 func (c *Chip) Run() error {
 	var opcode uint16
 	var cntr int
+	rand.Seed(time.Now().UTC().UnixNano())
 	for ; c.pc < memSize-1; c.NextInstr() {
 		// for now lets just deal with 10 instructions
 		//if cntr == 10 {
