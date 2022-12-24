@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"os"
 	"time"
@@ -54,7 +55,6 @@ func (c *Chip) SetJump(val uint16) {
 }
 
 func (c *Chip) LoadROM(path string) error {
-	//fmt.Println("the rom path is:", path)
 	var err error
 	var rom *os.File
 	rom, err = os.Open(path)
@@ -107,26 +107,17 @@ func (c *Chip) loadFonts() {
 
 func (c *Chip) Run() error {
 	var opcode uint16
-	var cntr int
 	rand.Seed(time.Now().UTC().UnixNano())
 	for ; c.pc < memSize-1; c.NextInstr() {
-		// for now lets just deal with 10 instructions
-		//if cntr == 10 {
-		//break
-		//} else {
-		//cntr++
-		//}
-		cntr++
-
 		opcode = uint16(c.mem[c.pc])<<8 | uint16(c.mem[c.pc+1])
-		fmt.Printf("pc:%02x, mem:%02x, shift:%02x, opcode: %04x\n",
+		log.Printf("\npc:%02x, mem:%02x, shift:%02x, opcode: %04x\n",
 			c.pc, c.mem[c.pc], uint16(c.mem[c.pc])<<8, opcode)
 
 		switch opcode & 0xF000 {
 		case 0x0000:
 			switch opcode & 0x00FF {
 			case 0x00E0:
-				fmt.Println("CLS")
+				log.Println("CLS")
 			case 0x00EE:
 				c.SetJump(c.stack[c.sp])
 				c.sp--
@@ -222,34 +213,30 @@ func (c *Chip) Run() error {
 			x := uint16(c.v[(opcode&0x0F00)>>8])
 			y := uint16(c.v[(opcode&0x00F0)>>4])
 			n := opcode & 0x000F
-			//mems := make([]byte, 0, n)
 			for yLine := uint16(0); yLine < n; yLine++ {
 				row := c.mem[c.i+yLine]
-				//mems = append(mems, row)
+				// now read each bit from row (byte) to get x coors
 				for xLine := uint16(0); xLine < 8; xLine++ {
-					pix := row & (0x80 >> xLine)
+					pix := row & (0x80 >> xLine) // 0x80 == 0b10000000
 					if pix == 0 {
 						continue
 					}
-					pos := x + xLine + (y + yLine*64)
-					//fmt.Printf("pos: %d, pix: %02x\n", pos, pix)
+					pos := x + xLine + (y+yLine)*64 // dis[y+yLine][(x+xLine)]
 					if c.display[pos] == 1 {
-						c.v[0xF] = 1
+						c.v[0xF] = 1 // collision!
 					}
 					c.display[pos] ^= 1
 				}
 			}
-			//fmt.Printf("x: %d, y: %d, mems: %02x\n", x, y, mems)
-			//fmt.Println("f:", c.v[0xf])
 			for i := range c.display {
-				if i%64 == 0 {
+				if i%64 == 0 && i != 0 {
 					fmt.Println()
 				}
 				if c.display[i] == 0 {
 					fmt.Print(" ")
-					continue
+				} else {
+					fmt.Print("o")
 				}
-				fmt.Print(c.display[i])
 			}
 		case 0xE000:
 			fmt.Println("Keypad not implemented")
