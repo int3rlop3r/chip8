@@ -24,10 +24,48 @@ type Chip struct {
 	delay    uint8
 	sound    uint8
 	keyboard [16]byte
-	display  [64 * 32]byte // since display is 64*32
-	stack    [24]uint16    // for now let's not use the emulated memory
+	//display  [64 * 32]byte // since display is 64*32
+	display *Display
+	stack   [24]uint16 // for now let's not use the emulated memory
 
 	jmp bool // this flag is not part of the spec, used for iteration
+}
+
+type Display struct {
+	Buff [64 * 32]byte
+}
+
+func (d *Display) Clear() {
+}
+
+func (d *Display) Start() {
+	termops := []string{
+		"\x1b[2J",   // clear the screen
+		"\x1b[H",    // CUP - get the cursor UP (top left)
+		"\x1b[?25l", // display the cursor
+	}
+	for _, op := range termops {
+		fmt.Fprint(os.Stdout, op)
+	}
+
+	for signal := range signals {
+		switch signal {
+		case "clear":
+			d.Clear()
+		}
+	}
+}
+
+func (d *Display) Stop() {
+	close(signals)
+	termops := []string{
+		"\x1b[2J",   // clear the screen
+		"\x1b[H",    // CUP - get the cursor UP (top left)
+		"\x1b[?25h", // display the cursor
+	}
+	for _, op := range termops {
+		fmt.Fprint(os.Stdout, op)
+	}
 }
 
 func NewChip() *Chip {
@@ -35,6 +73,7 @@ func NewChip() *Chip {
 	chip.pc = startOff
 	//chip.sp = stackOff
 	chip.loadFonts()
+	chip.display = &Display{}
 	return &chip
 }
 
@@ -106,6 +145,9 @@ func (c *Chip) loadFonts() {
 }
 
 func (c *Chip) Run() error {
+	go c.display.Start()
+	defer c.display.Stop()
+
 	var opcode uint16
 	rand.Seed(time.Now().UTC().UnixNano())
 	for ; c.pc < memSize-1; c.NextInstr() {

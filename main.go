@@ -11,12 +11,13 @@ var logFile *os.File
 
 func init() {
 	// minimal logging
-	//debug := os.Getenv["DEBUG"] == "true"
-	debug := true
-	logName := "/dev/null"
-	if debug {
-		logName = "chip8.log"
+	var logName string
+	if os.Getenv["LOG_FILE"] == "" {
+		logName = "/dev/null"
+	} else {
+		logName = os.Getenv["LOG_FILE"]
 	}
+	logName = "debug/chip8.log"
 	logFile, err := os.OpenFile(logName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
