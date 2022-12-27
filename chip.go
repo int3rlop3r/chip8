@@ -36,9 +36,6 @@ type Display struct {
 }
 
 func (d *Display) Clear() {
-}
-
-func (d *Display) Start() {
 	termops := []string{
 		"\x1b[2J",   // clear the screen
 		"\x1b[H",    // CUP - get the cursor UP (top left)
@@ -48,23 +45,24 @@ func (d *Display) Start() {
 		fmt.Fprint(os.Stdout, op)
 	}
 
-	for signal := range signals {
-		switch signal {
-		case "clear":
-			d.Clear()
-		}
+	for i, _ := range d.Buff {
+		d.Buff[i] = 0
 	}
+	d.Draw()
 }
 
-func (d *Display) Stop() {
-	close(signals)
-	termops := []string{
-		"\x1b[2J",   // clear the screen
-		"\x1b[H",    // CUP - get the cursor UP (top left)
-		"\x1b[?25h", // display the cursor
-	}
-	for _, op := range termops {
-		fmt.Fprint(os.Stdout, op)
+func (d *Display) Draw() {
+	//fmt.Printf("\x1b[H\x1b[0J%s\r\n", strings.Join(g.buf, []rune("\r\n")))
+	fmt.Print("\x1b[H\x1b[0J")
+	for i := range d.Buff {
+		if i%64 == 0 && i != 0 {
+			fmt.Print("\r\n")
+		}
+		if d.Buff[i] == 0 {
+			fmt.Print(" ")
+		} else {
+			fmt.Print("■")
+		}
 	}
 }
 
@@ -145,21 +143,21 @@ func (c *Chip) loadFonts() {
 }
 
 func (c *Chip) Run() error {
-	go c.display.Start()
-	defer c.display.Stop()
-
 	var opcode uint16
 	rand.Seed(time.Now().UTC().UnixNano())
+	cnt := 0
 	for ; c.pc < memSize-1; c.NextInstr() {
 		opcode = uint16(c.mem[c.pc])<<8 | uint16(c.mem[c.pc+1])
-		log.Printf("\npc:%02x, mem:%02x, shift:%02x, opcode: %04x\n",
-			c.pc, c.mem[c.pc], uint16(c.mem[c.pc])<<8, opcode)
+		log.Printf("\npc:%02x, mem:%02x, shift:%02x, opcode: %04x, cnt: %d\n",
+			c.pc, c.mem[c.pc], uint16(c.mem[c.pc])<<8, opcode, cnt)
+		cnt++
 
 		switch opcode & 0xF000 {
 		case 0x0000:
 			switch opcode & 0x00FF {
 			case 0x00E0:
-				log.Println("CLS")
+				//log.Println("CLS")
+				c.display.Clear()
 			case 0x00EE:
 				c.SetJump(c.stack[c.sp])
 				c.sp--
@@ -264,22 +262,13 @@ func (c *Chip) Run() error {
 						continue
 					}
 					pos := x + xLine + (y+yLine)*64 // dis[y+yLine][(x+xLine)]
-					if c.display[pos] == 1 {
+					if c.display.Buff[pos] == 1 {
 						c.v[0xF] = 1 // collision!
 					}
-					c.display[pos] ^= 1
+					c.display.Buff[pos] ^= 1
 				}
 			}
-			for i := range c.display {
-				if i%64 == 0 && i != 0 {
-					fmt.Println()
-				}
-				if c.display[i] == 0 {
-					fmt.Print(" ")
-				} else {
-					fmt.Print("o")
-				}
-			}
+			c.display.Draw()
 		case 0xE000:
 			fmt.Println("Keypad not implemented")
 		case 0xF000:
@@ -288,5 +277,6 @@ func (c *Chip) Run() error {
 			return fmt.Errorf("unknown operation: %04x", opcode)
 		}
 	}
+	log.Println("broke")
 	return nil
 }
