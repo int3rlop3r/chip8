@@ -156,7 +156,6 @@ func (c *Chip) Run() error {
 		case 0x0000:
 			switch opcode & 0x00FF {
 			case 0x00E0:
-				//log.Println("CLS")
 				c.display.Clear()
 			case 0x00EE:
 				c.SetJump(c.stack[c.sp])
