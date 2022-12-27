@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 
 	"golang.org/x/term"
 )
@@ -50,12 +49,12 @@ func init() {
 func setupLogging() {
 	// minimal logging
 	var logName string
-	//if os.Getenv["LOG_FILE"] == "" {
-	//logName = "/dev/null"
-	//} else {
-	//logName = os.Getenv["LOG_FILE"]
-	//}
 	logName = "debug/chip8.log"
+	if os.Getenv("LOG_FILE") == "" {
+		logName = "/dev/null"
+	} else {
+		logName = os.Getenv("LOG_FILE")
+	}
 	logFile, err := os.OpenFile(logName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
@@ -76,12 +75,7 @@ func shutDown() {
 }
 
 func main() {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	defer func() {
-		shutDown()
-		signal.Stop(signalChan)
-	}()
+	defer shutDown()
 
 	romPath := flag.String("rom", "", "path to a valid CHIP-8 ROM")
 	flag.Parse()
@@ -93,16 +87,5 @@ func main() {
 		return
 	}
 	log.Println("starting the chip-8 emulator")
-	completed := make(chan bool)
-	go func() {
-		chip.Run()
-		completed <- true
-	}()
-
-	select {
-	case <-signalChan:
-		exitError = &ExitError{"shutting down (ctr+c pressed)"}
-	case <-completed:
-		exitError = &ExitError{"rom completed, shutting down"}
-	}
+	chip.Run()
 }
