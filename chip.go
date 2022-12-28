@@ -52,18 +52,18 @@ func (d *Display) Clear() {
 }
 
 func (d *Display) Draw() {
-	//fmt.Printf("\x1b[H\x1b[0J%s\r\n", strings.Join(g.buf, []rune("\r\n")))
-	fmt.Print("\x1b[H\x1b[0J")
+	var vbuff string
 	for i := range d.Buff {
 		if i%64 == 0 && i != 0 {
-			fmt.Print("\r\n")
+			vbuff += "\r\n"
 		}
 		if d.Buff[i] == 0 {
-			fmt.Print(" ")
+			vbuff += " "
 		} else {
-			fmt.Print("■")
+			vbuff += "■"
 		}
 	}
+	fmt.Printf("\x1b[H\x1b[0J%s\r\n", vbuff)
 }
 
 func NewChip() *Chip {
@@ -275,7 +275,8 @@ func (c *Chip) Run() error {
 		default:
 			return fmt.Errorf("unknown operation: %04x", opcode)
 		}
+		// not sure if this needs to be here
+		time.Sleep(500 * time.Microsecond)
 	}
-	log.Println("broke")
 	return nil
 }
