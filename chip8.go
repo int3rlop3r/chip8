@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -52,18 +53,19 @@ func (d *Display) Clear() {
 }
 
 func (d *Display) Draw() {
-	var vbuff string
+	var vbuff strings.Builder
+	vbuff.Grow(3072)
 	for i := range d.Buff {
 		if i%64 == 0 && i != 0 {
-			vbuff += "\r\n"
+			vbuff.WriteString("\r\n")
 		}
 		if d.Buff[i] == 0 {
-			vbuff += " "
+			vbuff.WriteString(" ")
 		} else {
-			vbuff += "■"
+			vbuff.WriteString("■")
 		}
 	}
-	fmt.Printf("\x1b[H\x1b[0J%s\r\n", vbuff)
+	fmt.Printf("\x1b[H\x1b[0J%s\r\n", vbuff.String())
 }
 
 func NewChip() *Chip {
